@@ -43,7 +43,8 @@ class SGemm:
         # ///////////////////////////////////////////////////////////////////////////////
 
         padding_a = 4 if self.a_major_mode == utils.LayoutEnum.ROW_MAJOR else 0
-        padding_b = 4 if self.b_major_mode == utils.LayoutEnum.ROW_MAJOR else 0
+        # b don't need padding
+        padding_b = 0
         sA_layout = cute.make_layout(
             (self._bM, self._bK, self._num_stages),
             stride=(1, (self._bM + padding_a), self._bK * (self._bM + padding_a)),
