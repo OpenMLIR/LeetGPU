@@ -1,21 +1,15 @@
-import torch
-
 # copy from https://github.com/NVIDIA/cutlass/blob/main/examples/python/CuTeDSL/ampere/sgemm.py
 import cutlass
 import cutlass.cute as cute
-import cutlass.cute.testing as testing
-import cutlass.torch as cutlass_torch
 import cutlass.utils as utils
 from typing import Tuple
-import torch
-from cutlass.cute.runtime import from_dlpack
 
 
 class SGemm:
     def __init__(
         self,
-        cta_tiler: Tuple[int, int, int] = (128, 128, 8),
-        num_stages: int = 3,
+        cta_tiler: Tuple[int, int, int] = (192, 128, 8),
+        num_stages: int = 5,
         num_threads: int = 256,
     ):
         self._cta_tiler = cta_tiler
@@ -90,34 +84,6 @@ class SGemm:
             num_bits_per_copy=mB.element_type.width,
         )
 
-        if cutlass.const_expr(self.a_major_mode == utils.LayoutEnum.COL_MAJOR):
-            num_vectorized = 4 if (mA.layout.max_alignment % 16 == 0) else 1
-            atom_async_copy_A = cute.make_copy_atom(
-                cute.nvgpu.cpasync.CopyG2SOp(),
-                mA.element_type,
-                num_bits_per_copy=mA.element_type.width * num_vectorized,
-            )
-            major_mode_size = self._bM // num_vectorized
-            tA = cute.make_layout(
-                (major_mode_size, self._num_threads // major_mode_size),
-                stride=(1, major_mode_size),
-            )
-            vA = cute.make_layout((num_vectorized, 1))
-
-        if cutlass.const_expr(self.b_major_mode == utils.LayoutEnum.COL_MAJOR):
-            num_vectorized = 4 if (mB.layout.max_alignment % 16 == 0) else 1
-            atom_async_copy_B = cute.make_copy_atom(
-                cute.nvgpu.cpasync.CopyG2SOp(),
-                mA.element_type,
-                num_bits_per_copy=mB.element_type.width * num_vectorized,
-            )
-            major_mode_size = self._bN // num_vectorized
-            tB = cute.make_layout(
-                (major_mode_size, self._num_threads // major_mode_size),
-                stride=(1, major_mode_size),
-            )
-            vB = cute.make_layout((num_vectorized, 1))
-
         tiled_copy_A = cute.make_tiled_copy_tv(atom_async_copy_A, tA, vA)
         tiled_copy_B = cute.make_tiled_copy_tv(atom_async_copy_B, tB, vB)
 
@@ -144,10 +110,7 @@ class SGemm:
         atoms_layout = cute.make_layout(
             (self._num_threads // 16, 16, 1), stride=(16, 1, 0)
         )
-        if cutlass.const_expr(self.c_major_mode == utils.LayoutEnum.COL_MAJOR):
-            atoms_layout = cute.make_layout(
-                (16, self._num_threads // 16, 1), stride=(1, 16, 0)
-            )
+
         op = cute.nvgpu.MmaUniversalOp(cutlass.Float32)
         permutation_tiler_M = cute.make_layout(
             (atoms_layout.shape[0], 4), stride=(4, 1)
@@ -551,14 +514,8 @@ class SGemm:
         return
 
 @cute.jit
-def cutedsl_solve(A: cute.Tensor, B: cute.Tensor, C: cute.Tensor):
+def solve(A: cute.Tensor, B: cute.Tensor, C: cute.Tensor, M: cute.Int32, N: cute.Int32, K: cute.Int32):
     sgemm = SGemm()
-    sgemm.__call__(A, B, C)
-
-# A, B, C are tensors on the GPU
-def solve(A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, M: int, N: int, K: int):
-    B_T = B.T.contiguous()
-    a_tensor = from_dlpack(A)
-    b_tensor = from_dlpack(B_T)
-    c_tensor = from_dlpack(C)
-    cutedsl_solve(a_tensor, b_tensor, c_tensor)
+    layout = cute.make_layout((B.shape[1], B.shape[0]), stride=(1, B.shape[1],))
+    b_T = cute.make_tensor(B.iterator, layout)
+    sgemm.__call__(A, b_T, C)
