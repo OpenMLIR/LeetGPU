@@ -50,6 +50,6 @@ def softmax_kernel(input: cute.Tensor, output: cute.Tensor, s_layout: cute.Layou
 @cute.jit
 def solve(input: cute.Tensor, output: cute.Tensor, N: cute.Int32):
     block_dim = 1024, 1, 1
-    grid_dim = cute.ceil_div((N, 1, 1), block_dim)
+    grid_dim = 1, 1, 1
     s_layout = cute.make_layout((1024), stride=(1))
     softmax_kernel(input, output, s_layout).launch(grid=grid_dim, block=block_dim)

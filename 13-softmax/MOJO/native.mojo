@@ -64,7 +64,7 @@ fn softmax_kernel(input: UnsafePointer[Float32], output: UnsafePointer[Float32],
 def solve(input: UnsafePointer[Float32], output: UnsafePointer[Float32], N: Int32):
     var BLOCK_SIZE: Int32 = 1024
     var ctx = DeviceContext()
-    var num_blocks = ceildiv(N, BLOCK_SIZE)
+    var num_blocks = 1
 
     ctx.enqueue_function[softmax_kernel](
         input, output, N,
