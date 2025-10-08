@@ -1,6 +1,6 @@
 # LeetGPU Solutions
 
-This repository contains my personal solutions to various problems from [LeetGPU](https://leetgpu.com/challenges). The solutions are written primarily in **Triton** (or specify [CuTeDSL](./CuTeDSL/)/CUDA/MOJO🔥) and are categorized by problem. My nickname is [BobHuang](https://leetgpu.com/profile?display_name=BobHuang).
+This repository contains my personal solutions to various problems from [LeetGPU](https://leetgpu.com/challenges). The solutions are written primarily in **Triton**, or specify [CuTeDSL](./CuTeDSL)/CUDA/MOJO🔥 and are categorized by problem. My nickname is [BobHuang](https://leetgpu.com/profile?display_name=BobHuang).
 
 LeetGPU now includes a **solutions feature** within the challenge section. And [AlphaGPU/leetgpu-challenges](https://github.com/AlphaGPU/leetgpu-challenges) has all challenges.
 
